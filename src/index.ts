@@ -6,22 +6,36 @@ import type { Env, SyncRequest, SyncResponse, Tier, ValidationResponse } from '.
 
 const app = new Hono<{ Bindings: Env }>()
 
-// CORS — extension origins are dynamic per install ID, so we use a regex match
-// rather than a single Origin allow-list.
-app.use(
-  '*',
-  cors({
-    origin: (origin) => {
-      if (!origin) return null
-      if (origin.startsWith('chrome-extension://')) return origin
-      if (origin === 'https://tabpiles.app') return origin
-      return null
-    },
+// CORS allow-list comes from env.ALLOWED_ORIGINS (comma-separated). Two
+// match modes per entry:
+//   - "chrome-extension://*"   wildcard prefix match (every installed extension
+//                              passes; LOCK THIS DOWN to the specific published
+//                              chrome-extension://<id> after CWS approval)
+//   - "https://exact.host"     exact-string match
+//
+// Anything not in the list returns null, which makes hono/cors omit the
+// Access-Control-Allow-Origin header and the browser blocks the response.
+function makeOriginCheck(allowedRaw: string | undefined) {
+  const entries = (allowedRaw ?? '').split(',').map((s) => s.trim()).filter(Boolean)
+  const exact = new Set(entries.filter((e) => !e.endsWith('*')))
+  const prefixes = entries.filter((e) => e.endsWith('*')).map((e) => e.slice(0, -1))
+  return (origin: string | undefined) => {
+    if (!origin) return null
+    if (exact.has(origin)) return origin
+    if (prefixes.some((p) => origin.startsWith(p))) return origin
+    return null
+  }
+}
+
+app.use('*', async (c, next) => {
+  const check = makeOriginCheck(c.env.ALLOWED_ORIGINS)
+  return cors({
+    origin: check,
     allowMethods: ['GET', 'POST', 'OPTIONS'],
     allowHeaders: ['Content-Type'],
     maxAge: 600,
-  }),
-)
+  })(c, next)
+})
 
 app.get('/health', (c) => c.json({ ok: true, ts: Date.now() }))
 
@@ -90,13 +104,27 @@ app.post('/validate', async (c) => {
   }
 
   // Cache miss or stale → hit LS. On LS failure, prefer falling back to cached
-  // value if it exists (offline grace on the SERVER side too).
+  // value if it exists (offline grace on the SERVER side too). NOTE: on the
+  // fallback path we DO NOT bump validated_at — extending the trust window on
+  // failure would let an outage paper over a revocation indefinitely.
   try {
     const lsRes = await ls.validate(c.env, licenseKey, instanceId)
-    const valid = lsRes.valid && lsRes.license_key?.status === 'active'
-    const tier: Tier = valid ? ls.variantToTier(lsRes.meta?.variant_id, c.env) : 'free'
-    const expiresAt = ls.expiresAtMs(lsRes.license_key?.expires_at)
-    await cache.upsertCache(c.env, licenseKey, instanceId, tier, valid, expiresAt, lsRes.meta?.variant_id ?? null, now)
+
+    // A well-formed LS response always carries `license_key` when reachable.
+    // Missing license_key OR meta on a 200 = malformed payload (transient LS
+    // bug or partial outage). Do NOT poison the cache with a synthetic free
+    // row in that case; treat it as an LS failure and fall through to the
+    // catch block's cached-fallback path.
+    const lic = lsRes.license_key
+    const meta = lsRes.meta
+    if (lic === undefined || meta === undefined) {
+      throw new Error('LS returned malformed payload (no license_key/meta)')
+    }
+
+    const valid = lsRes.valid && lic.status === 'active'
+    const tier: Tier = valid ? ls.variantToTier(meta.variant_id, c.env) : 'free'
+    const expiresAt = ls.expiresAtMs(lic.expires_at)
+    await cache.upsertCache(c.env, licenseKey, instanceId, tier, valid, expiresAt, meta.variant_id ?? null, now)
 
     const out: ValidationResponse = { valid, tier, expiresAt, instanceId, cachedAt: now }
     return c.json(out)

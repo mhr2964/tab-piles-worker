@@ -17,7 +17,7 @@ LS_VARIANT_MONTHLY  = "__SET_AT_DEPLOY__"
 LS_VARIANT_YEARLY   = "__SET_AT_DEPLOY__"
 LS_VARIANT_LIFETIME = "__SET_AT_DEPLOY__"
 CACHE_TTL_MS        = "86400000"   # 24h
-ALLOWED_ORIGINS     = "chrome-extension://*,https://tabpiles.app"
+ALLOWED_ORIGINS     = "chrome-extension://*,https://tabpiles.pages.dev"
 
 # Secrets — set via: wrangler secret put <NAME>
 # - LS_API_KEY            (LemonSqueezy API key with read+write on licenses)
