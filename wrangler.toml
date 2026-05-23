@@ -1,0 +1,23 @@
+name = "tab-piles-worker"
+main = "src/index.ts"
+compatibility_date = "2026-01-15"
+compatibility_flags = ["nodejs_compat"]
+
+# D1 binding. Create with: wrangler d1 create tab-piles
+# Then paste the returned database_id below.
+[[d1_databases]]
+binding = "DB"
+database_name = "tab-piles"
+database_id = "__USER_FILL_IN_AFTER_CREATE__"
+
+# Public variables. Tier → LemonSqueezy variant ID mapping. Fill in after
+# creating the three products in LS dashboard (Settings → Stores → Products).
+[vars]
+LS_VARIANT_MONTHLY  = "__SET_AT_DEPLOY__"
+LS_VARIANT_YEARLY   = "__SET_AT_DEPLOY__"
+LS_VARIANT_LIFETIME = "__SET_AT_DEPLOY__"
+CACHE_TTL_MS        = "86400000"   # 24h
+ALLOWED_ORIGINS     = "chrome-extension://*,https://tabpiles.app"
+
+# Secrets — set via: wrangler secret put <NAME>
+# - LS_API_KEY            (LemonSqueezy API key with read+write on licenses)
