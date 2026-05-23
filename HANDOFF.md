@@ -18,7 +18,7 @@ state: green-pending-deploy
    - Set `activation_limit` to 5 on every variant — that's the device cap.
    - Copy the three variant IDs into `wrangler.toml` (`LS_VARIANT_MONTHLY`, `LS_VARIANT_YEARLY`, `LS_VARIANT_LIFETIME`).
    - Generate an API key (Settings → API) with read+write on licenses, then `npx wrangler secret put LS_API_KEY` and paste it.
-5. **Deploy.** `npm run deploy`. Default subdomain `tab-piles-worker.<your-account>.workers.dev`. Optional: bind a custom subdomain like `api.tabpiles.app` in CF dashboard.
+5. **Deploy.** `npm run deploy`. Default subdomain `tab-piles-worker.<your-account>.workers.dev`. That URL is what you paste into the extension's `WORKER_URL` constant. Optional later: bind a custom subdomain via CF dashboard.
 6. **Smoke.** `curl https://<worker>/health` → `{ "ok": true, ... }`. Then `curl -X POST https://<worker>/activate -H 'content-type: application/json' -d '{"licenseKey":"REAL-KEY","instanceName":"smoke"}'` with a real test purchase.
 
 ## Endpoints
@@ -61,7 +61,7 @@ For tests that don't hit real LS, you can stub `src/lemonsqueezy.ts` exports.
 - **`activation_limit` is set on the LS variant**, not in this code. If you forget to set it on the LS dashboard, the device cap is unlimited. Set to 5.
 - **Cache poisoning.** If LS returns a bad response (e.g., 5xx with a partial body), we don't poison the cache — only successful `valid` responses overwrite cache.
 - **D1 batch + ON CONFLICT.** D1 supports `batch()` of prepared statements but they execute in a single transaction. Don't mix `batch()` and `run()` for the same logical operation.
-- **CORS.** Allowed origins are `chrome-extension://*` (regex match) and `https://tabpiles.app`. Add staging origins as needed.
+- **CORS.** Allowed origins are read from the `ALLOWED_ORIGINS` env var in `wrangler.toml` (comma-separated). Default: `chrome-extension://*,https://tabpiles.pages.dev`. **After CWS approval, replace `chrome-extension://*` with the specific published extension id** (`chrome-extension://<the-id>`) — `*` allows ANY installed extension to call the API.
 - **`/sync` 402** is the standard for "Pro required" — extension should treat as "fall back to local-only mode" not as a generic error.
 
 ## Do not touch
