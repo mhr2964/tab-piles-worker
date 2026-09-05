@@ -8,7 +8,7 @@ compatibility_flags = ["nodejs_compat"]
 [[d1_databases]]
 binding = "DB"
 database_name = "tab-piles"
-database_id = "__USER_FILL_IN_AFTER_CREATE__"
+database_id = "fb795916-3f24-4319-9eb9-585a9984ae72"
 
 # Public variables. Tier → LemonSqueezy variant ID mapping. Fill in after
 # creating the three products in LS dashboard (Settings → Stores → Products).
