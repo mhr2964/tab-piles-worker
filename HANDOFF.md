@@ -3,23 +3,27 @@
 Cloudflare Worker for license validation, deactivation, and Pro-tier cloud sync. Talks to the Lemon Squeezy License API and stores cached validations + cloud pile state in D1.
 
 ```yaml
-last-model: claude-opus-4-7
-last-session: 2026-05-23
-state: green-pending-deploy
+last-model: claude-sonnet-5
+last-session: 2026-09-05
+state: yellow
 ```
 
-## Next action — user-blocks
+## Next action — user-block (Lemon Squeezy)
 
-1. **Install deps.** `npm install` (one-time).
-2. **Create the D1 database.** `npx wrangler d1 create tab-piles` → copy the returned `database_id` into `wrangler.toml`.
-3. **Run the migration (local + remote).** `npm run migrate:local` then `npm run migrate:remote` (remote requires deploy account).
-4. **Lemon Squeezy.**
-   - Create three products: monthly ($5/mo), yearly ($40/yr), lifetime ($79 one-time). Enable "License Keys" on each.
-   - Set `activation_limit` to 5 on every variant — that's the device cap.
-   - Copy the three variant IDs into `wrangler.toml` (`LS_VARIANT_MONTHLY`, `LS_VARIANT_YEARLY`, `LS_VARIANT_LIFETIME`).
-   - Generate an API key (Settings → API) with read+write on licenses, then `npx wrangler secret put LS_API_KEY` and paste it.
-5. **Deploy.** `npm run deploy`. Default subdomain `tab-piles-worker.<your-account>.workers.dev`. That URL is what you paste into the extension's `WORKER_URL` constant. Optional later: bind a custom subdomain via CF dashboard.
-6. **Smoke.** `curl https://<worker>/health` → `{ "ok": true, ... }`. Then `curl -X POST https://<worker>/activate -H 'content-type: application/json' -d '{"licenseKey":"REAL-KEY","instanceName":"smoke"}'` with a real test purchase.
+Worker is **live**: `https://tab-piles-worker.subtotal.workers.dev`. D1 database `tab-piles` (`fb795916-3f24-4319-9eb9-585a9984ae72`) is created and migrated. Everything below this line requires your own Lemon Squeezy account (identity/payout info) — nothing left for a model to drive here until you do this part:
+
+1. Sign up at [Lemon Squeezy](https://www.lemonsqueezy.com/).
+2. Create three products: monthly ($5/mo), yearly ($40/yr), lifetime ($79 one-time). Enable "License Keys" on each.
+3. Set `activation_limit` to 5 on every variant — that's the device cap.
+4. Copy the three variant IDs — paste them into `wrangler.toml`'s `[vars]` block (`LS_VARIANT_MONTHLY`, `LS_VARIANT_YEARLY`, `LS_VARIANT_LIFETIME`), replacing `__SET_AT_DEPLOY__`.
+5. Generate an API key (Settings → API) with read+write on licenses.
+6. Copy each variant's public checkout URL — these go into `tab-piles-landing/src/main.js`'s `LS_OVERLAY_URLS`.
+
+Hand the variant IDs + checkout URLs + API key back and the rest can be finished in one pass:
+- `npx wrangler secret put LS_API_KEY` (paste the key)
+- Update `wrangler.toml` vars, `npm run deploy`
+- Update landing's `LS_OVERLAY_URLS`, redeploy landing (`npx wrangler pages deploy src --project-name=tabpiles`)
+- Smoke: real activation against a real purchase
 
 ## Endpoints
 
