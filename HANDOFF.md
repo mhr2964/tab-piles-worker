@@ -4,26 +4,20 @@ Cloudflare Worker for license validation, deactivation, and Pro-tier cloud sync.
 
 ```yaml
 last-model: claude-sonnet-5
-last-session: 2026-09-05
+last-session: 2026-09-06
 state: yellow
 ```
 
-## Next action — user-block (Lemon Squeezy)
+## Next action — user-block (take store live)
 
-Worker is **live**: `https://tab-piles-worker.subtotal.workers.dev`. D1 database `tab-piles` (`fb795916-3f24-4319-9eb9-585a9984ae72`) is created and migrated. Everything below this line requires your own Lemon Squeezy account (identity/payout info) — nothing left for a model to drive here until you do this part:
+Fully wired as of 2026-09-06: worker live at `https://tab-piles-worker.subtotal.workers.dev`, D1 migrated, real LS variant IDs in `wrangler.toml` (monthly `2095935`, yearly `2095936`, lifetime `2095937`), `LS_API_KEY` set as a Cloudflare secret (not in git). `npm run verify` confirms the worker successfully round-trips to the real Lemon Squeezy License API.
 
-1. Sign up at [Lemon Squeezy](https://www.lemonsqueezy.com/).
-2. Create three products: monthly ($5/mo), yearly ($40/yr), lifetime ($79 one-time). Enable "License Keys" on each.
-3. Set `activation_limit` to 5 on every variant — that's the device cap.
-4. Copy the three variant IDs — paste them into `wrangler.toml`'s `[vars]` block (`LS_VARIANT_MONTHLY`, `LS_VARIANT_YEARLY`, `LS_VARIANT_LIFETIME`), replacing `__SET_AT_DEPLOY__`.
-5. Generate an API key (Settings → API) with read+write on licenses.
-6. Copy each variant's public checkout URL — these go into `tab-piles-landing/src/main.js`'s `LS_OVERLAY_URLS`.
+Two things only you can decide/do before this can take real money:
 
-Hand the variant IDs + checkout URLs + API key back and the rest can be finished in one pass:
-- `npx wrangler secret put LS_API_KEY` (paste the key)
-- Update `wrangler.toml` vars, `npm run deploy`
-- Update landing's `LS_OVERLAY_URLS`, redeploy landing (`npx wrangler pages deploy src --project-name=tabpiles`)
-- Smoke: real activation against a real purchase
+1. **Store is in test mode.** All three variants show `test_mode: true` / status "pending" in the LS API. Real checkouts won't charge real cards until the store is switched to live — check Lemon Squeezy dashboard → Store settings for what's blocking that (likely payout/business details).
+2. **Monthly and yearly both have a 7-day free trial enabled** (LS default, not something we asked for). Confirm that's intentional — if not, turn it off per variant in the LS dashboard.
+
+Once the store is live, smoke test: buy your own monthly plan for real, paste the license key into the extension's Settings, confirm tier flips to Pro within 2s.
 
 ## Endpoints
 
