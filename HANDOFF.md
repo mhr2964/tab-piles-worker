@@ -8,16 +8,14 @@ last-session: 2026-09-06
 state: yellow
 ```
 
-## Next action — user-block (take store live)
+## Next action — waiting on Lemon Squeezy account review
 
 Fully wired as of 2026-09-06: worker live at `https://tab-piles-worker.subtotal.workers.dev`, D1 migrated, real LS variant IDs in `wrangler.toml` (monthly `2095935`, yearly `2095936`, lifetime `2095937`), `LS_API_KEY` set as a Cloudflare secret (not in git). `npm run verify` confirms the worker successfully round-trips to the real Lemon Squeezy License API.
 
-Two things only you can decide/do before this can take real money:
+- **7-day free trial on monthly/yearly is intentional** (confirmed 2026-09-06) — not a bug, no action needed.
+- **Store is in test mode because Lemon Squeezy is reviewing the account** (confirmed 2026-09-06, standard for new accounts) — no action on our end, just wait for LS to approve. Once approved, the store flips to live automatically; no code or config change needed here.
 
-1. **Store is in test mode.** All three variants show `test_mode: true` / status "pending" in the LS API. Real checkouts won't charge real cards until the store is switched to live — check Lemon Squeezy dashboard → Store settings for what's blocking that (likely payout/business details).
-2. **Monthly and yearly both have a 7-day free trial enabled** (LS default, not something we asked for). Confirm that's intentional — if not, turn it off per variant in the LS dashboard.
-
-Once the store is live, smoke test: buy your own monthly plan for real, paste the license key into the extension's Settings, confirm tier flips to Pro within 2s.
+Once the store goes live: smoke test by buying your own monthly plan for real, paste the license key into the extension's Settings, confirm tier flips to Pro within 2s.
 
 ## Endpoints
 
